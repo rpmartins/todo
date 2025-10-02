@@ -27,6 +27,7 @@
             border-radius: 12px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
+            overflow: visible;
         }
 
         h1 {
@@ -46,11 +47,13 @@
             flex-direction: column;
             gap: 0.5rem;
             margin-bottom: 1.5rem;
+            overflow: visible;
         }
 
         .input-row {
             display: flex;
             gap: 0.5rem;
+            overflow: visible;
         }
 
         input[type="text"], input[type="date"] {
@@ -59,10 +62,12 @@
             border-radius: 8px;
             font-size: 1rem;
             transition: all 0.3s ease;
+            height: 3rem;
+            box-sizing: border-box;
         }
 
         input[type="text"] {
-            flex: 2;
+            width: 100%;
             min-width: 0;
         }
 
@@ -346,6 +351,87 @@
             color: #0ff;
             box-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
         }
+
+        /* Autocomplete styles */
+        .autocomplete-items {
+            position: absolute;
+            border: 2px solid;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .autocomplete-items div {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .autocomplete-items div:hover {
+            font-weight: bold;
+        }
+
+        .autocomplete-active {
+            font-weight: bold !important;
+        }
+
+        .input-wrapper {
+            position: relative;
+            flex: 2;
+            overflow: visible;
+        }
+
+        /* Style-specific autocomplete colors */
+        .style1 .autocomplete-items {
+            background-color: white;
+            border-color: #667eea;
+        }
+
+        .style1 .autocomplete-items div:hover {
+            background-color: #f0f4ff;
+        }
+
+        .style2 .autocomplete-items {
+            background-color: white;
+            border-color: #f5576c;
+        }
+
+        .style2 .autocomplete-items div:hover {
+            background-color: #fff5f7;
+        }
+
+        .style3 .autocomplete-items {
+            background-color: #1a1a2e;
+            border-color: #0f3460;
+            color: #eee;
+        }
+
+        .style3 .autocomplete-items div:hover {
+            background-color: #0f3460;
+        }
+
+        .style4 .autocomplete-items {
+            background-color: white;
+            border-color: #52b788;
+        }
+
+        .style4 .autocomplete-items div:hover {
+            background-color: #d8f3dc;
+        }
+
+        .style5 .autocomplete-items {
+            background-color: #000;
+            border-color: #0ff;
+            color: #0ff;
+        }
+
+        .style5 .autocomplete-items div:hover {
+            background-color: #111;
+        }
     </style>
 </head>
 <body class="style1">
@@ -357,7 +443,9 @@
 
         <div class="input-section">
             <div class="input-row">
-                <input type="text" id="taskInput" placeholder="Add a new task..." onkeypress="handleKeyPress(event)">
+                <div class="input-wrapper">
+                    <input type="text" id="taskInput" placeholder="Add a new task..." onkeypress="handleKeyPress(event)" autocomplete="off">
+                </div>
                 <input type="date" id="dateInput">
                 <button onclick="addTask()">Add</button>
             </div>
@@ -375,6 +463,7 @@
             'Nature Green',
             'Neon Cyberpunk'
         ];
+        let taskHistory = [];
 
         function cycleStyle() {
             document.body.classList.remove(`style${currentStyle}`);
@@ -499,6 +588,11 @@
 
             input.value = '';
             dateInput.value = '';
+
+            // Add task to history if not already there
+            if (!taskHistory.includes(taskText)) {
+                taskHistory.push(taskText);
+            }
         }
 
         function handleKeyPress(event) {
@@ -529,6 +623,92 @@
                 checkOverdue(task, dueDate);
             });
         }, 60000);
+
+        // Autocomplete functionality
+        const taskInput = document.getElementById('taskInput');
+        let currentFocus = -1;
+
+        taskInput.addEventListener('input', function() {
+            const val = this.value;
+            closeAllLists();
+
+            if (!val) {
+                return false;
+            }
+
+            currentFocus = -1;
+
+            const autocompleteList = document.createElement('div');
+            autocompleteList.setAttribute('id', 'autocomplete-list');
+            autocompleteList.setAttribute('class', 'autocomplete-items');
+            this.parentNode.appendChild(autocompleteList);
+
+            const matches = taskHistory.filter(function(item) {
+                return item.toLowerCase().includes(val.toLowerCase());
+            });
+
+            matches.forEach(function(match) {
+                const item = document.createElement('div');
+                item.innerHTML = match;
+                item.addEventListener('click', function() {
+                    taskInput.value = match;
+                    closeAllLists();
+                });
+                autocompleteList.appendChild(item);
+            });
+        });
+
+        taskInput.addEventListener('keydown', function(e) {
+            let list = document.getElementById('autocomplete-list');
+            if (list) {
+                let items = list.getElementsByTagName('div');
+                if (e.keyCode === 40) { // Down arrow
+                    e.preventDefault();
+                    currentFocus++;
+                    addActive(items);
+                } else if (e.keyCode === 38) { // Up arrow
+                    e.preventDefault();
+                    currentFocus--;
+                    addActive(items);
+                } else if (e.keyCode === 13) { // Enter
+                    if (currentFocus > -1) {
+                        e.preventDefault();
+                        if (items) items[currentFocus].click();
+                    }
+                } else if (e.keyCode === 27) { // Escape
+                    closeAllLists();
+                }
+            }
+        });
+
+        function addActive(items) {
+            if (!items) return false;
+            removeActive(items);
+            if (currentFocus >= items.length) currentFocus = 0;
+            if (currentFocus < 0) currentFocus = items.length - 1;
+            items[currentFocus].classList.add('autocomplete-active');
+        }
+
+        function removeActive(items) {
+            for (let i = 0; i < items.length; i++) {
+                items[i].classList.remove('autocomplete-active');
+            }
+        }
+
+        function closeAllLists(element) {
+            const items = document.getElementsByClassName('autocomplete-items');
+            for (let i = 0; i < items.length; i++) {
+                if (element !== items[i] && element !== taskInput) {
+                    items[i].parentNode.removeChild(items[i]);
+                }
+            }
+            currentFocus = -1;
+        }
+
+        // Close autocomplete when clicking outside
+        document.addEventListener('click', function(e) {
+            closeAllLists(e.target);
+        });
     </script>
 </body>
 </html>
