@@ -22,12 +22,13 @@
 
         .container {
             width: 90%;
-            max-width: 600px;
+            max-width: 800px;
             padding: 2rem;
             border-radius: 12px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
             overflow: visible;
+            position: relative;
         }
 
         h1 {
@@ -68,12 +69,49 @@
 
         input[type="text"] {
             width: 100%;
-            min-width: 0;
+            min-width: 300px;
         }
 
         input[type="date"] {
-            flex: 1;
+            flex: 0 0 150px;
             min-width: 150px;
+        }
+
+        select {
+            flex: 0 0 150px;
+            min-width: 150px;
+            padding: 0.75rem;
+            border: 2px solid;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            height: 3rem;
+            box-sizing: border-box;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            transform: scale(1.02);
+        }
+
+        .admin-link {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .admin-link a {
+            color: inherit;
+            text-decoration: none;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+
+        .admin-link a:hover {
+            opacity: 1;
+            text-decoration: underline;
         }
 
         input[type="text"]:focus, input[type="date"]:focus {
@@ -183,7 +221,7 @@
             color: #667eea;
         }
 
-        .style1 input[type="text"], .style1 input[type="date"] {
+        .style1 input[type="text"], .style1 input[type="date"], .style1 select {
             border-color: #667eea;
         }
 
@@ -214,7 +252,7 @@
             color: #f5576c;
         }
 
-        .style2 input[type="text"], .style2 input[type="date"] {
+        .style2 input[type="text"], .style2 input[type="date"], .style2 select {
             border-color: #f5576c;
             background: white;
         }
@@ -251,8 +289,13 @@
             color: #aaa;
         }
 
-        .style3 input[type="text"], .style3 input[type="date"] {
+        .style3 input[type="text"], .style3 input[type="date"], .style3 select {
             border-color: #0f3460;
+            background: #1a1a2e;
+            color: #eee;
+        }
+
+        .style3 select option {
             background: #1a1a2e;
             color: #eee;
         }
@@ -284,7 +327,7 @@
             color: #2d6a4f;
         }
 
-        .style4 input[type="text"], .style4 input[type="date"] {
+        .style4 input[type="text"], .style4 input[type="date"], .style4 select {
             border-color: #52b788;
             background: #f1faee;
         }
@@ -324,7 +367,7 @@
             color: #0ff;
         }
 
-        .style5 input[type="text"], .style5 input[type="date"] {
+        .style5 input[type="text"], .style5 input[type="date"], .style5 select {
             border-color: #0ff;
             background: #000;
             color: #0ff;
@@ -332,6 +375,11 @@
 
         .style5 input[type="date"]::-webkit-calendar-picker-indicator {
             filter: invert(1);
+        }
+
+        .style5 select option {
+            background: #000;
+            color: #0ff;
         }
 
         .style5 button {
@@ -381,8 +429,9 @@
 
         .input-wrapper {
             position: relative;
-            flex: 2;
+            flex: 1 1 auto;
             overflow: visible;
+            min-width: 300px;
         }
 
         /* Style-specific autocomplete colors */
@@ -436,6 +485,10 @@
 </head>
 <body class="style1">
     <div class="container">
+        <div class="admin-link">
+            <a href="admin.html">⚙️ Admin</a>
+        </div>
+
         <h1>Todo List</h1>
         <div class="style-info">Style 1 of 5: Modern Blue</div>
 
@@ -447,6 +500,9 @@
                     <input type="text" id="taskInput" placeholder="Add a new task..." onkeypress="handleKeyPress(event)" autocomplete="off">
                 </div>
                 <input type="date" id="dateInput">
+                <select id="ownerSelect">
+                    <option value="">Select Owner</option>
+                </select>
                 <button onclick="addTask()">Add</button>
             </div>
         </div>
@@ -464,6 +520,7 @@
             'Neon Cyberpunk'
         ];
         let taskHistory = [];
+        let taskOwners = JSON.parse(localStorage.getItem('taskOwners')) || [];
 
         function cycleStyle() {
             document.body.classList.remove(`style${currentStyle}`);
@@ -472,18 +529,52 @@
             document.querySelector('.style-info').textContent = `Style ${currentStyle} of 5: ${styleNames[currentStyle - 1]}`;
         }
 
+        function loadOwners() {
+            const ownerSelect = document.getElementById('ownerSelect');
+            ownerSelect.innerHTML = '<option value="">Select Owner</option>';
+
+            // Sort owners alphabetically
+            const sortedOwners = taskOwners.slice().sort(function(a, b) {
+                return a.toLowerCase().localeCompare(b.toLowerCase());
+            });
+
+            sortedOwners.forEach(function(owner) {
+                const option = document.createElement('option');
+                option.value = owner;
+                option.textContent = owner;
+                ownerSelect.appendChild(option);
+            });
+        }
+
+        // Initialize default owners if none exist
+        if (taskOwners.length === 0) {
+            taskOwners = ['Renato', 'Maxwell', 'April', 'Marina'];
+            localStorage.setItem('taskOwners', JSON.stringify(taskOwners));
+        }
+
+        // Load owners on page load
+        loadOwners();
+
         function addTask() {
             const input = document.getElementById('taskInput');
             const dateInput = document.getElementById('dateInput');
+            const ownerSelect = document.getElementById('ownerSelect');
             const taskText = input.value.trim();
             const dueDate = dateInput.value;
+            const owner = ownerSelect.value;
 
             if (taskText === '') {
                 return;
             }
 
+            if (!owner) {
+                alert('Please assign an owner to the task');
+                return;
+            }
+
             const li = document.createElement('li');
             li.dataset.dueDate = dueDate || '';
+            li.dataset.owner = owner || '';
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -541,6 +632,13 @@
                 taskContent.appendChild(taskDateSpan);
             }
 
+            if (owner) {
+                const ownerSpan = document.createElement('div');
+                ownerSpan.className = 'task-date';
+                ownerSpan.textContent = `Owner: ${owner}`;
+                taskContent.appendChild(ownerSpan);
+            }
+
             const deleteBtn = document.createElement('button');
             deleteBtn.textContent = 'Delete';
             deleteBtn.className = 'delete-btn';
@@ -588,6 +686,7 @@
 
             input.value = '';
             dateInput.value = '';
+            ownerSelect.value = '';
 
             // Add task to history if not already there
             if (!taskHistory.includes(taskText)) {
